@@ -1,3 +1,6 @@
+# This is a simulated image downloader for development and testing purposes.
+# In production, use `step1b_sentinel_downloader.py` for real data download from Sentinel Hub API.
+
 from base_pipeline import BasePipeline  
 
 class ImageDownloader(BasePipeline):  # Define a new class that inherits from BasePipeline

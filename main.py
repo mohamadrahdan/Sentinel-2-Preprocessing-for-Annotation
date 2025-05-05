@@ -1,6 +1,7 @@
 from step1_download_images import ImageDownloader
 from step2_preprocess_images import ImagePreprocessor
 from step3_save_ready_images import ImageSaver
+from config_sentinelhub import get_config, test_config
 
 if __name__ == "__main__":
     # Step 1: Download images
@@ -14,3 +15,8 @@ if __name__ == "__main__":
     # Step 3: Save ready images for annotation
     saver = ImageSaver(input_folder="processed", output_folder="ready_for_annotation")
     saver.save_images()
+
+    config = get_config(profile_name="landsat-pipeline")
+    test_config(config)
+
+

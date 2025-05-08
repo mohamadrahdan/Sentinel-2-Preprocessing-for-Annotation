@@ -22,7 +22,7 @@ if __name__ == "__main__":
     test_config(config)
 
     # Define bounding box [min_lon, min_lat, max_lon, max_lat]
-    bbox = [51.5, 32.5, 51.6, 32.6]  # an small area around the Isfahan city
+    bbox = [51.15, 31.18, 51.17, 31.22]  # an small area around the Isfahan city
 
     # Define date range
     time_interval = ("2023-08-01", "2023-08-10")

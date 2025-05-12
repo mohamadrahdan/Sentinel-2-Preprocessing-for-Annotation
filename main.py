@@ -5,7 +5,8 @@ from step1b_sentinel_downloader import SentinelDownloader
 
 if __name__ == "__main__":
     # Step 1: Download real Sentinel-2 image for actual AOI
-    bbox = [51.3463, 30.6981, 51.9443, 31.1949]  # ← from your KML
+    #bbox = [51.3463, 30.6981, 51.9443, 31.1949]  # ← from your KML
+    bbox = [51.40, 30.80, 51.41, 30.81]
     time_interval = ("2023-08-01", "2023-08-10")
 
     downloader = SentinelDownloader(bbox=bbox, time_interval=time_interval)

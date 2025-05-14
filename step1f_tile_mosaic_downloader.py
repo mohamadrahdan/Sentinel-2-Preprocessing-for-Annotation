@@ -1,9 +1,17 @@
+import os, glob
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
+import numpy as np
 from sentinelhub import (
-    CRS, bbox_to_dimensions, BBox, BBoxSplitter
+    CRS, MimeType, DataCollection, SentinelHubRequest,
+    bbox_to_dimensions, BBox, BBoxSplitter
 )
+from rasterio.merge import merge
+from rasterio import open as rio_open
 from config_sentinelhub import get_config
+from pathlib import Path, PurePosixPath
+import shutil
+import rasterio
 
 
 AOI = [51.3463, 30.6981, 51.9443, 31.1949]   # minLon, minLat, maxLon, maxLat
@@ -65,3 +73,52 @@ def download_tile(date_str: str, tile: BBox, idx: int):
         print(f"  ✘ tile {idx:03d}: {e}")
         return None
 
+
+def mosaic_day(date_str: str):
+    """Merge all tiles of one day → mosaics/YYYY-MM-DD.tif; returns True/False"""
+    paths = sorted(glob.glob(os.path.join(DIR_TILES, f"{date_str}_*.tif")))
+    if not paths:
+        return False
+
+    # open sources
+    src_files = [rasterio.open(p) for p in paths]
+
+    # merge → mosaic array & affine transform
+    mosaic, out_trans = merge(src_files)
+
+    # copy metadata from first tile & update
+    out_meta = src_files[0].meta.copy()
+    out_meta.update({
+        "driver":   "GTiff",
+        "height":   mosaic.shape[1],
+        "width":    mosaic.shape[2],
+        "transform": out_trans
+    })
+
+    out_path = os.path.join(DIR_MOSAICS, f"{date_str}.tif")
+    with rasterio.open(out_path, "w", **out_meta) as dst:
+        dst.write(mosaic)
+
+    # cleanup
+    for src in src_files:
+        src.close()
+    for p in paths:
+        os.remove(p)
+
+    print(f"[MOSAIC] {Path(out_path).name}")
+    return True
+# 2️⃣ iterate days and tiles
+current = DATE_START
+while current <= DATE_END:
+    dstr = current.strftime("%Y-%m-%d")
+    print(f"\n=== {dstr} ===")
+    downloaded = False
+    for idx, tile in enumerate(TILES, 1):
+        downloaded |= bool(download_tile(dstr, tile, idx))
+    if downloaded:
+        mosaic_day(dstr)
+    else:
+        print("  (no data)")
+    current += timedelta(days=1)
+
+print("\n[FINISHED]")

@@ -33,3 +33,35 @@ splitter = BBoxSplitter(
 
 TILES = splitter.get_bbox_list()
 print(f"[INIT] total tiles: {len(TILES)} (each ≤ {TILE_PX}px)\n")
+
+def download_tile(date_str: str, tile: BBox, idx: int):
+    """Download one tile → rename into tiles_tmp/YYYY-MM-DD_###.tif."""
+    size = bbox_to_dimensions(tile, resolution=RESOLUTION)
+
+    req = SentinelHubRequest(
+        data_folder=DIR_TILES,
+        evalscript=evalscript,
+        input_data=[SentinelHubRequest.input_data(
+            data_collection=DataCollection.SENTINEL2_L2A,
+            time_interval=(date_str, date_str)
+        )],
+        responses=[SentinelHubRequest.output_response("default", MimeType.TIFF)],
+        bbox=tile,
+        size=size,
+        config=config
+    )
+
+    try:
+        _ = req.get_data(save_data=True)                     # file saved on disk
+        # path returned by SH is relative → join with data_folder
+        rel = PurePosixPath(req.get_filename_list()[0])      # cross-platform
+        src = Path(DIR_TILES) / rel                          # full path
+        dst = Path(DIR_TILES) / f"{date_str}_{idx:03d}.tif"
+        dst.parent.mkdir(exist_ok=True)
+        shutil.move(src, dst)                                # safer than rename
+        print(f"  ✔️ tile {idx:03d}")
+        return dst
+    except Exception as e:
+        print(f"  ✘ tile {idx:03d}: {e}")
+        return None
+

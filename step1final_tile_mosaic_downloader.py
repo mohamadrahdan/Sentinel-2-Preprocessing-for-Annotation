@@ -39,3 +39,21 @@ function setup(){return{input:["B04","B03","B02","dataMask"],
 function evaluatePixel(s){
   return [s.B04*10000,s.B03*10000,s.B02*10000,s.dataMask]}
 """
+
+# helper functions
+def save_array_as_tiff(arr: np.ndarray, bbox: BBox, path: Path) -> None:
+    h, w, bands = arr.shape
+    transform = rasterio.transform.from_bounds(*bbox, w, h)
+    profile = dict(driver="GTiff", height=h, width=w, count=bands, dtype="uint16",
+                   crs=bbox.crs.pyproj_crs(), transform=transform, compress="deflate")
+    with rasterio.open(path, "w", **profile) as dst:
+        for i in range(bands):
+            dst.write(arr[..., i], i + 1)
+
+def write_preview_png(arr16: np.ndarray, path: Path) -> None:
+    if np.any(arr16):
+        p2, p98 = np.percentile(arr16[arr16 > 0], (2, 98))
+    else:
+        p2, p98 = 0, 1
+    stretched = np.clip((arr16 - p2)/(p98-p2+1e-6)*255,0,255).astype(np.uint8)
+    imageio.imwrite(path, stretched)

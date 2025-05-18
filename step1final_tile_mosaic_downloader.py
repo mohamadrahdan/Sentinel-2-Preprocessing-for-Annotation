@@ -57,3 +57,37 @@ def write_preview_png(arr16: np.ndarray, path: Path) -> None:
         p2, p98 = 0, 1
     stretched = np.clip((arr16 - p2)/(p98-p2+1e-6)*255,0,255).astype(np.uint8)
     imageio.imwrite(path, stretched)
+
+# tile download
+def download_tile(day: str, tile_bbox: BBox, idx: int) -> Path | None:
+    req = SentinelHubRequest(
+        evalscript=EVALSCRIPT_RGB_MASK,
+        input_data=[SentinelHubRequest.input_data(
+            data_collection=DataCollection.SENTINEL2_L2A, time_interval=(day, day)
+        )],
+        responses=[SentinelHubRequest.output_response("default", MimeType.TIFF)],
+        bbox=tile_bbox,
+        size=bbox_to_dimensions(tile_bbox, RESOLUTION),
+        config=CONFIG,)
+    try:
+        data = req.get_data(save_data=False)
+    except Exception as exc:
+        print(f"  ⚠ tile {idx:03d}: {exc}")
+        return None
+    if not data:
+        return None
+
+    rgbm = data[0]
+    mask = rgbm[..., 3] > 0
+    if mask.mean() < VALID_RATIO_MIN:
+        return None
+    cloud = ((rgbm[..., :3] == 0).all(axis=-1)) & mask
+    if cloud.mean() > CLOUD_RATIO_MAX:
+        return None
+
+    tif = TILE_TMP16_DIR / f"{day}_{idx:03d}.tif"
+    png = TILE_TMP8_DIR  / f"{day}_{idx:03d}.png"
+    save_array_as_tiff(rgbm[..., :3], tile_bbox, tif)
+    write_preview_png(rgbm[..., :3], png)
+    print(f"  ✔ tile {idx:03d}")
+    return tif

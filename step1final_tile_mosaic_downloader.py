@@ -91,3 +91,32 @@ def download_tile(day: str, tile_bbox: BBox, idx: int) -> Path | None:
     write_preview_png(rgbm[..., :3], png)
     print(f"  ✔ tile {idx:03d}")
     return tif
+
+# daily mosaic
+def mosaic_day(day: str, tif_paths: List[Path]) -> None:
+    if not tif_paths:
+        print("  (no data)")
+        return
+
+    datasets = [rasterio.open(p) for p in tif_paths]
+    mosaic, out_transform = merge(datasets)
+    meta = datasets[0].meta.copy()
+    for ds in datasets: ds.close()
+
+    meta.update(height=mosaic.shape[1], width=mosaic.shape[2],
+                transform=out_transform, compress="deflate")
+
+    out_tif = MOSAIC_16_DIR / f"{day}.tif"
+    with rasterio.open(out_tif, "w", **meta) as dst:
+        dst.write(mosaic)
+
+    rgb = np.transpose(mosaic, (1, 2, 0))
+    out_png = MOSAIC_8_DIR / f"{day}.png"
+    write_preview_png(rgb, out_png)
+
+    print(f"[MOSAIC] {out_tif.name}  │  [PREVIEW] {out_png.name}")
+
+    if not KEEP_TILES:
+        for p in tif_paths:
+            (TILE_TMP8_DIR / (p.stem + ".png")).unlink(missing_ok=True)
+            p.unlink(missing_ok=True)

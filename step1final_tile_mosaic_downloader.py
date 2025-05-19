@@ -17,13 +17,13 @@ from config_sentinelhub import get_config  # .env credentials
 
 # user parameters
 AOI_WGS84   = [51.20, 30.16, 52, 32]
-START_DATE  = date(2017, 3, 30)
+START_DATE  = date(2017, 3, 27)
 END_DATE    = date(2018, 3, 30)
-RESOLUTION  = 10
-TILE_PX     = 2400
-KEEP_TILES        = False
-VALID_RATIO_MIN   = 0.15
-CLOUD_RATIO_MAX   = 0.80
+RESOLUTION  = 10          # metres / pixel
+TILE_PX     = 2400        # keep well below 2500-px API limit
+KEEP_TILES        = False     # True → keep individual tile files
+VALID_RATIO_MIN   = 0.15      # ≥15 % land pixels required
+CLOUD_RATIO_MAX   = 0.80      # reject if >80 % cloud/shadow
 
 # folder layout
 CONFIG         = get_config()

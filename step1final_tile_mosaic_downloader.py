@@ -120,3 +120,36 @@ def mosaic_day(day: str, tif_paths: List[Path]) -> None:
         for p in tif_paths:
             (TILE_TMP8_DIR / (p.stem + ".png")).unlink(missing_ok=True)
             p.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    full_bbox = BBox(AOI_WGS84, CRS.WGS84)
+    w_px, h_px = bbox_to_dimensions(full_bbox, RESOLUTION)
+    cols = math.ceil(w_px / TILE_PX)
+    rows = math.ceil(h_px / TILE_PX)
+
+    x_step = (full_bbox.max_x - full_bbox.min_x) / cols
+    y_step = (full_bbox.max_y - full_bbox.min_y) / rows
+
+    tiles: list[BBox] = []
+    for r in range(rows):
+        for c in range(cols):
+            minx = full_bbox.min_x + c * x_step
+            maxx = minx + x_step
+            maxy = full_bbox.max_y - r * y_step
+            miny = maxy - y_step
+            tiles.append(BBox([minx, miny, maxx, maxy], CRS.WGS84))
+
+    print(f"[INIT] total tiles: {len(tiles)} (each ≤ 2500 px)\n")
+
+    cur = START_DATE
+    one_day = timedelta(days=1)
+    while cur <= END_DATE:
+        dstr = cur.isoformat()
+        print(f"\n=== {dstr} ===")
+        daily = [t for i, tbox in enumerate(tiles, 1)
+                 if (t:=download_tile(dstr, tbox, i))]
+        mosaic_day(dstr, daily)
+        cur += one_day
+
+    print("\n[DONE]")
